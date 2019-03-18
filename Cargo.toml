@@ -1,0 +1,17 @@
+[package]
+name = "spellcaster-sacrifice"
+version = "0.1.0"
+authors = ["Aaron McLeod <aaron.g.mcleod@gmail.com>"]
+edition = "2018"
+
+[dependencies]
+dirs = "1.0.5"
+sdl2 = "0.32"
+gfx = "0.18.0"
+gfx_window_sdl = "0.9.0"
+image = "0.21.0"
+rodio = "0.8.1"
+serde = "1.0.89"
+serde_derive = "1.0.89"
+serde_json = "1.0.39"
+specs = "0.14.3"
