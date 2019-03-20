@@ -1,7 +1,9 @@
+#[macro_use]
+extern crate gfx;
+
 use std::time;
 
 use gfx::{
-    self,
     format::{DepthStencil, Rgba8},
     Device,
 };
@@ -12,6 +14,8 @@ use specs::World;
 mod assets;
 mod components;
 mod loader;
+mod renderer;
+mod scene_graph;
 mod screen;
 mod settings;
 mod utils;
@@ -19,6 +23,9 @@ mod world;
 
 use components::delta_time::DeltaTime;
 use world::setup_world;
+
+const SCREEN_WIDTH: u32 = 1280;
+const SCREEN_HEIGHT: u32 = 720;
 
 fn main() -> Result<(), String> {
     let sdl_context = sdl2::init()?;
@@ -29,7 +36,7 @@ fn main() -> Result<(), String> {
         .set_context_profile(sdl2::video::GLProfile::Core);
     video_subsystem.gl_attr().set_context_version(3, 2);
 
-    let builder = video_subsystem.window("Spellcaster - Sacrifice", 1280, 720);
+    let builder = video_subsystem.window("Spellcaster - Sacrifice", SCREEN_WIDTH, SCREEN_HEIGHT);
 
     let (window, _gl_context, mut device, mut factory, main_color, _main_depth) =
         gfx_window_sdl::init::<Rgba8, DepthStencil>(&video_subsystem, builder)
