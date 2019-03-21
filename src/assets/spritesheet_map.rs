@@ -6,8 +6,8 @@ use super::spritesheet::Spritesheet;
 use crate::loader;
 
 pub struct SpritesheetMap<R: gfx::Resources> {
-    frame_to_sheet_name: HashMap<String, String>,
-    sheet_name_map: HashMap<String, (Spritesheet, loader::Texture<R>)>,
+    pub frame_to_sheet_name: HashMap<String, String>,
+    pub sheet_name_map: HashMap<String, (Spritesheet, loader::Texture<R>)>,
 }
 
 impl<R> SpritesheetMap<R>
@@ -18,7 +18,7 @@ where
     where
         F: gfx::Factory<R>,
     {
-        let mut texture_to_sheet_name = HashMap::new();
+        let mut frame_to_sheet_name = HashMap::new();
         let mut sheet_name_map = HashMap::new();
         for name in sheet_names {
             let asset_data =

@@ -6,12 +6,13 @@ use gfx_glyph::{GlyphBrush, Layout, Section};
 use specs::World;
 
 use crate::{
-    assets::spritesheet::{Frame, Spritesheet},
+    assets::spritesheet::Frame,
     assets::spritesheet_map::SpritesheetMap,
     components::{
         camera::Camera, color::Color, shape::Shape, text::Text,
         transform::Transform as ComponentTransform,
     },
+    loader::Texture,
     SCREEN_HEIGHT, SCREEN_WIDTH,
 };
 
@@ -68,6 +69,8 @@ pub struct Renderer<R: gfx::Resources> {
         gfx::handle::ShaderResourceView<R, [f32; 4]>,
         gfx::handle::Sampler<R>,
     ),
+    last_sheet: String,
+    batch: Vec<Vertex>,
 }
 
 impl<R> Renderer<R>
@@ -109,12 +112,33 @@ where
             model: Matrix4::identity(),
             target,
             color_texture: (texture_view, factory.create_sampler(sinfo)),
+            last_sheet: String::new(),
+            batch: Vec::new(),
         }
+    }
+
+    fn create_drawable_texture<F>(
+        &self,
+        factory: &mut F,
+        texture: &Texture<R>,
+    ) -> (
+        gfx::handle::ShaderResourceView<R, [f32; 4]>,
+        gfx::handle::Sampler<R>,
+    )
+    where
+        F: gfx::Factory<R>,
+    {
+        (
+            texture.clone(),
+            factory.create_sampler(texture::SamplerInfo::new(
+                texture::FilterMethod::Bilinear,
+                texture::WrapMode::Clamp,
+            )),
+        )
     }
 
     fn draw_verticies<F, C>(
         &mut self,
-        data: Vec<Vertex>,
         encoder: &mut gfx::Encoder<R, C>,
         factory: &mut F,
         tex: (
@@ -128,7 +152,7 @@ where
         F: gfx::Factory<R>,
     {
         let index_data: Vec<u32> = vec![0, 1, 2, 2, 3, 0];
-        let (vbuf, slice) = factory.create_vertex_buffer_with_slice(&data, &index_data[..]);
+        let (vbuf, slice) = factory.create_vertex_buffer_with_slice(&self.batch, &index_data[..]);
 
         let params = pipe::Data {
             vbuf: vbuf,
@@ -146,6 +170,32 @@ where
         encoder.draw(&slice, &self.pso, &params);
     }
 
+    pub fn flush<C, F>(
+        &mut self,
+        encoder: &mut gfx::Encoder<R, C>,
+        factory: &mut F,
+        spritesheet_map: &SpritesheetMap<R>,
+        camera: &Camera,
+    ) where
+        C: gfx::CommandBuffer<R>,
+        F: gfx::Factory<R>,
+    {
+        if self.batch.len() > 0 {
+            let texture = if self.last_sheet == "white_texture" {
+                self.color_texture.clone()
+            } else {
+                let (_, texture) = spritesheet_map
+                    .sheet_name_map
+                    .get(&self.last_sheet)
+                    .unwrap();
+                self.create_drawable_texture(factory, texture)
+            };
+
+            self.draw_verticies(encoder, factory, texture, &camera);
+            self.batch.clear();
+        }
+    }
+
     pub fn reset_transform(&mut self) {
         self.model = Matrix4::identity().into();
     }
@@ -157,10 +207,9 @@ where
         factory: &mut F,
         transform: &ComponentTransform,
         frame_name: Option<&String>,
-        spritesheet_map: &SpritesheetMap,
+        spritesheet_map: &SpritesheetMap<R>,
         color: Option<&Color>,
     ) where
-        R: gfx::Resources,
         C: gfx::CommandBuffer<R>,
         F: gfx::Factory<R>,
     {
@@ -174,8 +223,24 @@ where
         let mut tx2 = 1.0;
         let mut ty2 = 1.0;
 
-        let texture = if let Some(frame_name) = frame_name {
+        if let Some(frame_name) = frame_name {
             let sheet_name = spritesheet_map.frame_to_sheet_name.get(frame_name).unwrap();
+            if self.last_sheet != *sheet_name {
+                if self.batch.len() > 0 {
+                    let texture = if self.last_sheet == "white_texture" {
+                        self.color_texture.clone()
+                    } else {
+                        let (_, texture) = spritesheet_map
+                            .sheet_name_map
+                            .get(&self.last_sheet)
+                            .unwrap();
+                        self.create_drawable_texture(factory, texture)
+                    };
+
+                    self.draw_verticies(encoder, factory, texture, &camera);
+                }
+                self.last_sheet = sheet_name.clone();
+            }
             let (spritesheet, texture) = spritesheet_map.sheet_name_map.get(sheet_name).unwrap();
             let region = spritesheet
                 .frames
@@ -188,15 +253,17 @@ where
             ty = region.frame.y as f32 / sh;
             tx2 = (region.frame.x as f32 + region.frame.w as f32) / sw;
             ty2 = (region.frame.y as f32 + region.frame.h as f32) / sh;
-            (
-                texture.clone(),
-                factory.create_sampler(texture::SamplerInfo::new(
-                    texture::FilterMethod::Bilinear,
-                    texture::WrapMode::Clamp,
-                )),
-            )
         } else {
-            self.color_texture.clone()
+            if self.batch.len() > 0 && self.last_sheet != "white_texture" {
+                let (_, texture) = spritesheet_map
+                    .sheet_name_map
+                    .get(&self.last_sheet)
+                    .unwrap();
+
+                let texture = self.create_drawable_texture(factory, texture);
+                self.draw_verticies(encoder, factory, texture, &camera);
+            }
+            self.last_sheet = "white_texture".to_string();
         };
 
         let color = if let Some(color) = color {
@@ -205,10 +272,7 @@ where
             [1.0; 4]
         };
 
-        let mut data: Vec<Vertex> = Vec::new();
-        add_quad_to_batch(&mut data, color, w, h, tx, ty, tx2, ty2);
-
-        self.draw_verticies(data, encoder, factory, texture, &camera);
+        add_quad_to_batch(&mut self.batch, color, w, h, tx, ty, tx2, ty2);
     }
 
     pub fn render_shape<C, F>(
