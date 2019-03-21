@@ -7,6 +7,7 @@ use specs::World;
 
 use crate::{
     assets::spritesheet::{Frame, Spritesheet},
+    assets::spritesheet_map::SpritesheetMap,
     components::{
         camera::Camera, color::Color, shape::Shape, text::Text,
         transform::Transform as ComponentTransform,
@@ -149,42 +150,6 @@ where
         self.model = Matrix4::identity().into();
     }
 
-    pub fn render_single_texture<C, F>(
-        &mut self,
-        encoder: &mut gfx::Encoder<R, C>,
-        world: &World,
-        factory: &mut F,
-        transform: &ComponentTransform,
-        texture: &gfx::handle::ShaderResourceView<R, [f32; 4]>,
-        color: &Color,
-    ) where
-        R: gfx::Resources,
-        C: gfx::CommandBuffer<R>,
-        F: gfx::Factory<R>,
-    {
-        let camera_res = world.read_resource::<Camera>();
-        let camera = camera_res.deref();
-        let w = transform.size.x as f32;
-        let h = transform.size.y as f32;
-
-        let tx = 0.0;
-        let ty = 0.0;
-        let tx2 = 1.0;
-        let ty2 = 1.0;
-
-        let tex = (
-            texture.clone(),
-            factory.create_sampler(texture::SamplerInfo::new(
-                texture::FilterMethod::Scale,
-                texture::WrapMode::Clamp,
-            )),
-        );
-
-        let data: Vec<Vertex> = get_quad(color.0, w, h, tx, ty, tx2, ty2);
-
-        self.draw_verticies(data, encoder, factory, tex, &camera);
-    }
-
     pub fn render<C, F>(
         &mut self,
         encoder: &mut gfx::Encoder<R, C>,
@@ -192,9 +157,8 @@ where
         factory: &mut F,
         transform: &ComponentTransform,
         frame_name: Option<&String>,
-        spritesheet: &Spritesheet,
+        spritesheet_map: &SpritesheetMap,
         color: Option<&Color>,
-        texture: Option<&gfx::handle::ShaderResourceView<R, [f32; 4]>>,
     ) where
         R: gfx::Resources,
         C: gfx::CommandBuffer<R>,
@@ -210,7 +174,9 @@ where
         let mut tx2 = 1.0;
         let mut ty2 = 1.0;
 
-        if let Some(frame_name) = frame_name {
+        let texture = if let Some(frame_name) = frame_name {
+            let sheet_name = spritesheet_map.frame_to_sheet_name.get(frame_name).unwrap();
+            let (spritesheet, texture) = spritesheet_map.sheet_name_map.get(sheet_name).unwrap();
             let region = spritesheet
                 .frames
                 .iter()
@@ -222,12 +188,6 @@ where
             ty = region.frame.y as f32 / sh;
             tx2 = (region.frame.x as f32 + region.frame.w as f32) / sw;
             ty2 = (region.frame.y as f32 + region.frame.h as f32) / sh;
-        }
-
-        let tex: (
-            gfx::handle::ShaderResourceView<R, [f32; 4]>,
-            gfx::handle::Sampler<R>,
-        ) = if let Some(texture) = texture {
             (
                 texture.clone(),
                 factory.create_sampler(texture::SamplerInfo::new(
@@ -245,9 +205,10 @@ where
             [1.0; 4]
         };
 
-        let data: Vec<Vertex> = get_quad(color, w, h, tx, ty, tx2, ty2);
+        let mut data: Vec<Vertex> = Vec::new();
+        add_quad_to_batch(&mut data, color, w, h, tx, ty, tx2, ty2);
 
-        self.draw_verticies(data, encoder, factory, tex, &camera);
+        self.draw_verticies(data, encoder, factory, texture, &camera);
     }
 
     pub fn render_shape<C, F>(
@@ -337,27 +298,34 @@ where
     }
 }
 
-fn get_quad(color: [f32; 4], w: f32, h: f32, tx: f32, ty: f32, tx2: f32, ty2: f32) -> Vec<Vertex> {
-    vec![
-        Vertex {
-            pos: [0.0, 0.0, 0.0],
-            uv: [tx, ty],
-            color: color,
-        },
-        Vertex {
-            pos: [w, 0.0, 0.0],
-            uv: [tx2, ty],
-            color: color,
-        },
-        Vertex {
-            pos: [w, h, 0.0],
-            uv: [tx2, ty2],
-            color: color,
-        },
-        Vertex {
-            pos: [0.0, h, 0.0],
-            uv: [tx, ty2],
-            color: color,
-        },
-    ]
+fn add_quad_to_batch(
+    batch: &mut Vec<Vertex>,
+    color: [f32; 4],
+    w: f32,
+    h: f32,
+    tx: f32,
+    ty: f32,
+    tx2: f32,
+    ty2: f32,
+) {
+    batch.push(Vertex {
+        pos: [0.0, 0.0, 0.0],
+        uv: [tx, ty],
+        color: color,
+    });
+    batch.push(Vertex {
+        pos: [w, 0.0, 0.0],
+        uv: [tx2, ty],
+        color: color,
+    });
+    batch.push(Vertex {
+        pos: [w, h, 0.0],
+        uv: [tx2, ty2],
+        color: color,
+    });
+    batch.push(Vertex {
+        pos: [0.0, h, 0.0],
+        uv: [tx, ty2],
+        color: color,
+    });
 }

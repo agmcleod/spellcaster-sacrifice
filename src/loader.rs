@@ -15,10 +15,9 @@ use serde_json;
 
 use crate::settings::Settings;
 
-pub fn gfx_load_texture<F, R>(
-    path: &str,
-    factory: &mut F,
-) -> (gfx::handle::ShaderResourceView<R, [f32; 4]>, u16, u16)
+pub type Texture<R: gfx::Resources> = gfx::handle::ShaderResourceView<R, [f32; 4]>;
+
+pub fn gfx_load_texture<F, R>(path: &str, factory: &mut F) -> (Texture<R>, u16, u16)
 where
     F: gfx::Factory<R>,
     R: gfx::Resources,
