@@ -21,7 +21,8 @@ mod settings;
 mod utils;
 mod world;
 
-use components::delta_time::DeltaTime;
+use components::{delta_time::DeltaTime, screen_change::ScreenChange};
+use screen::{play::Play, ScreenManager};
 use world::setup_world;
 
 const SCREEN_WIDTH: u32 = 1280;
@@ -38,15 +39,27 @@ fn main() -> Result<(), String> {
 
     let builder = video_subsystem.window("Spellcaster - Sacrifice", SCREEN_WIDTH, SCREEN_HEIGHT);
 
-    let (window, _gl_context, mut device, mut factory, main_color, _main_depth) =
-        gfx_window_sdl::init::<Rgba8, DepthStencil>(&video_subsystem, builder)
-            .map_err(|err| err.to_string())?;
+    let (window, _gl_context, mut device, mut factory, main_color, main_depth) =
+        gfx_window_sdl::init::<renderer::ColorFormat, renderer::DepthFormat>(
+            &video_subsystem,
+            builder,
+        )
+        .map_err(|err| err.to_string())?;
 
     let mut world = World::new();
 
     setup_world(&mut world);
 
+    let mut screen_manager = ScreenManager::new();
+    screen_manager.add_state(Play::get_name(), Box::new(Play {}));
+    screen_manager.swap_state(Play::get_name(), &mut world);
+
     let mut encoder: gfx::Encoder<_, _> = factory.create_command_buffer().into();
+    let target = renderer::WindowTargets {
+        color: main_color,
+        depth: main_depth,
+    };
+    let mut renderer = renderer::Renderer::new(&mut factory, target.clone());
 
     let mut events = sdl_context.event_pump().unwrap();
 
@@ -75,12 +88,23 @@ fn main() -> Result<(), String> {
             }
         }
 
+        screen_manager.update(&mut world);
+
         // draw a frame
-        encoder.clear(&main_color, [0.1, 0.2, 0.3, 1.0]);
+        encoder.clear(&target.color, [0.1, 0.2, 0.3, 1.0]);
         // <- draw actual stuff here
         encoder.flush(&mut device);
         window.gl_swap_window();
         device.cleanup();
+
+        let mut state_change = {
+            let mut state_change_storage = world.write_resource::<ScreenChange>();
+            let copy = state_change_storage.clone();
+            state_change_storage.reset();
+            copy
+        };
+
+        screen_manager.process_state_change(&mut state_change, &mut world);
     }
 
     Ok(())

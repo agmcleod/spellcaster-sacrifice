@@ -16,6 +16,8 @@ use crate::{
     SCREEN_HEIGHT, SCREEN_WIDTH,
 };
 
+mod tiled;
+
 pub type ColorFormat = gfx::format::Srgba8;
 pub type DepthFormat = gfx::format::Depth;
 
@@ -151,7 +153,15 @@ where
         C: gfx::CommandBuffer<R>,
         F: gfx::Factory<R>,
     {
-        let index_data: Vec<u32> = vec![0, 1, 2, 2, 3, 0];
+        let offset: u32 = (self.batch.len() * 4) as u32;
+        let index_data: Vec<u32> = vec![
+            0 + offset,
+            1 + offset,
+            2 + offset,
+            2 + offset,
+            3 + offset,
+            0 + offset,
+        ];
         let (vbuf, slice) = factory.create_vertex_buffer_with_slice(&self.batch, &index_data[..]);
 
         let params = pipe::Data {

@@ -1,6 +1,3 @@
-extern crate gfx;
-extern crate image;
-
 use std::env;
 use std::fs::{create_dir, File};
 use std::io::prelude::Read;
@@ -10,8 +7,10 @@ use std::path::{Path, PathBuf};
 
 use dirs;
 use gfx::texture::Mipmap;
+use image;
 use rodio::{decoder::Decoder, Decoder as SoundDecoder};
 use serde_json;
+use tiled::{parse_file, Map};
 
 use crate::settings::Settings;
 
@@ -36,6 +35,14 @@ where
 pub fn create_sound(sound_file_path: &str) -> Decoder<BufReader<File>> {
     let audio_file = File::open(&Path::new(&get_exe_path().join(sound_file_path))).unwrap();
     SoundDecoder::new(BufReader::new(audio_file)).unwrap()
+}
+
+pub fn load_map(path: &str) -> Map {
+    if let Ok(map) = parse_file(get_exe_path().join(path).as_path()) {
+        map
+    } else {
+        panic!("Could not load tiled map at {:?}", path);
+    }
 }
 
 pub fn read_text_from_file(path: &str) -> Result<String> {

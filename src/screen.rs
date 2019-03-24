@@ -1,7 +1,9 @@
 use specs::World;
 use std::collections::HashMap;
 
-use crate::{components::screen_change::ScreenChange, settings::Settings};
+use crate::components::screen_change::ScreenChange;
+
+pub mod play;
 
 pub trait Screen {
     fn setup(&mut self, world: &mut World);
