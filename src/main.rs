@@ -1,12 +1,10 @@
 #[macro_use]
 extern crate gfx;
 
+use std::collections::HashMap;
 use std::time;
 
-use gfx::{
-    format::{DepthStencil, Rgba8},
-    Device,
-};
+use gfx::Device;
 use gfx_window_sdl;
 use sdl2::{self, event::Event, keyboard::Keycode};
 use specs::World;
@@ -47,11 +45,21 @@ fn main() -> Result<(), String> {
         .map_err(|err| err.to_string())?;
 
     let mut world = World::new();
-
     setup_world(&mut world);
 
+    let mut map_tilesets = HashMap::new();
+    map_tilesets.insert(
+        "tiles.png".to_string(),
+        loader::gfx_load_texture("resources/maps/tiles.png", &mut factory).0,
+    );
+
+    let demomap = loader::load_map("resources/maps/demomap.tmx");
+
+    let mut tiled_maps = HashMap::new();
+    tiled_maps.insert("demomap".to_string(), demomap);
+
     let mut screen_manager = ScreenManager::new();
-    screen_manager.add_state(Play::get_name(), Box::new(Play {}));
+    screen_manager.add_state(Play::get_name(), Box::new(Play::new(tiled_maps)));
     screen_manager.swap_state(Play::get_name(), &mut world);
 
     let mut encoder: gfx::Encoder<_, _> = factory.create_command_buffer().into();
@@ -62,7 +70,6 @@ fn main() -> Result<(), String> {
     let mut renderer = renderer::Renderer::new(&mut factory, target.clone());
 
     let mut events = sdl_context.event_pump().unwrap();
-
     let mut running = true;
     let mut frame_start = time::Instant::now();
     while running {

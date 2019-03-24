@@ -1,14 +1,19 @@
+use specs::{Component, HashMapStorage};
 use tiled;
 
 use crate::renderer::Vertex;
 
 pub struct TiledMap {
     pub data: Vec<Vertex>,
+    // assuming usage of one tileset for now
+    pub tileset: String,
 }
 
 impl TiledMap {
     pub fn new(tilemap: &tiled::Map) -> TiledMap {
         let mut vertex_data: Vec<Vertex> = Vec::new();
+
+        let mut tileset_source = String::new();
 
         let mut index = 0;
         for (layer_index, layer) in tilemap.layers.iter().enumerate() {
@@ -46,6 +51,7 @@ impl TiledMap {
                         // build out texture coord data
                         for tileset in tilemap.tilesets.iter() {
                             let image = &tileset.images[0];
+                            tileset_source = image.source.clone();
                             // just handling a single image for now
                             if tileset.first_gid as usize + tileset.tiles.len() - 1
                                 <= *cell as usize
@@ -80,6 +86,13 @@ impl TiledMap {
             }
         }
 
-        TiledMap { data: vertex_data }
+        TiledMap {
+            data: vertex_data,
+            tileset: tileset_source,
+        }
     }
+}
+
+impl Component for TiledMap {
+    type Storage = HashMapStorage<Self>;
 }

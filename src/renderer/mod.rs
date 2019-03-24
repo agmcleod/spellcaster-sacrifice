@@ -16,8 +16,6 @@ use crate::{
     SCREEN_HEIGHT, SCREEN_WIDTH,
 };
 
-mod tiled;
-
 pub type ColorFormat = gfx::format::Srgba8;
 pub type DepthFormat = gfx::format::Depth;
 
@@ -236,19 +234,7 @@ where
         if let Some(frame_name) = frame_name {
             let sheet_name = spritesheet_map.frame_to_sheet_name.get(frame_name).unwrap();
             if self.last_sheet != *sheet_name {
-                if self.batch.len() > 0 {
-                    let texture = if self.last_sheet == "white_texture" {
-                        self.color_texture.clone()
-                    } else {
-                        let (_, texture) = spritesheet_map
-                            .sheet_name_map
-                            .get(&self.last_sheet)
-                            .unwrap();
-                        self.create_drawable_texture(factory, texture)
-                    };
-
-                    self.draw_verticies(encoder, factory, texture, &camera);
-                }
+                self.flush(encoder, factory, spritesheet_map, camera);
                 self.last_sheet = sheet_name.clone();
             }
             let (spritesheet, texture) = spritesheet_map.sheet_name_map.get(sheet_name).unwrap();
@@ -272,6 +258,7 @@ where
 
                 let texture = self.create_drawable_texture(factory, texture);
                 self.draw_verticies(encoder, factory, texture, &camera);
+                self.batch.clear();
             }
             self.last_sheet = "white_texture".to_string();
         };

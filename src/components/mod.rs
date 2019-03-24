@@ -1,6 +1,8 @@
 pub mod camera;
 pub mod color;
 pub mod delta_time;
+pub mod entity_lookup;
+pub mod map;
 pub mod node;
 pub mod screen_change;
 pub mod shape;

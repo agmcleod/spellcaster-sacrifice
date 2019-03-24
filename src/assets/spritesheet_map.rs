@@ -14,7 +14,7 @@ impl<R> SpritesheetMap<R>
 where
     R: gfx::Resources,
 {
-    fn new<F>(factory: &mut F, sheet_names: &[&str]) -> Self
+    pub fn new<F>(factory: &mut F, sheet_names: &[&str]) -> Self
     where
         F: gfx::Factory<R>,
     {
