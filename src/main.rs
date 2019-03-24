@@ -5,6 +5,7 @@ use std::collections::HashMap;
 use std::time;
 
 use gfx::Device;
+use gfx_glyph::GlyphBrushBuilder;
 use gfx_window_sdl;
 use sdl2::{self, event::Event, keyboard::Keycode};
 use specs::World;
@@ -19,9 +20,14 @@ mod settings;
 mod utils;
 mod world;
 
-use components::{delta_time::DeltaTime, screen_change::ScreenChange};
+use assets::spritesheet_map::SpritesheetMap;
+use components::{
+    animation_sheet::AnimationSheet, color::Color, delta_time::DeltaTime,
+    entity_lookup::EntityLookup, map::tiled::TiledMap, node::Node, screen_change::ScreenChange,
+    shape::Shape, sprite::Sprite, text::Text, transform::Transform,
+};
 use screen::{play::Play, ScreenManager};
-use world::setup_world;
+use world::{prepare_node, setup_world};
 
 const SCREEN_WIDTH: u32 = 1280;
 const SCREEN_HEIGHT: u32 = 720;
@@ -58,6 +64,12 @@ fn main() -> Result<(), String> {
     let mut tiled_maps = HashMap::new();
     tiled_maps.insert("demomap".to_string(), demomap);
 
+    let mut glyph_brush =
+        GlyphBrushBuilder::using_font_bytes(include_bytes!("../resources/Arial.ttf") as &[u8])
+            .build(factory.clone());
+
+    let spritesheet_map = SpritesheetMap::new(&mut factory, &[]);
+
     let mut screen_manager = ScreenManager::new();
     screen_manager.add_state(Play::get_name(), Box::new(Play::new(tiled_maps)));
     screen_manager.swap_state(Play::get_name(), &mut world);
@@ -72,6 +84,7 @@ fn main() -> Result<(), String> {
     let mut events = sdl_context.event_pump().unwrap();
     let mut running = true;
     let mut frame_start = time::Instant::now();
+
     while running {
         let duration = time::Instant::now() - frame_start;
         frame_start = time::Instant::now();
@@ -96,6 +109,39 @@ fn main() -> Result<(), String> {
         }
 
         screen_manager.update(&mut world);
+
+        {
+            let sprite_storage = world.read_storage::<Sprite>();
+            let mut transform_storage = world.write_storage::<Transform>();
+            let animation_sheet_storage = world.read_storage::<AnimationSheet>();
+            let color_storage = world.read_storage::<Color>();
+            let text_storage = world.read_storage::<Text>();
+            let shape_storage = world.read_storage::<Shape>();
+            let mut node_storage = world.write_storage::<Node>();
+
+            let root_entity = {
+                let lookup = world.read_resource::<EntityLookup>();
+                lookup.entities.get("root").unwrap().clone()
+            };
+
+            prepare_node(
+                &mut renderer,
+                &mut encoder,
+                root_entity,
+                &world,
+                &mut factory,
+                &spritesheet_map,
+                &mut glyph_brush,
+                &sprite_storage,
+                &mut transform_storage,
+                &animation_sheet_storage,
+                &color_storage,
+                &text_storage,
+                &shape_storage,
+                &mut node_storage,
+                &(1.0, 1.0),
+            );
+        }
 
         // draw a frame
         encoder.clear(&target.color, [0.1, 0.2, 0.3, 1.0]);

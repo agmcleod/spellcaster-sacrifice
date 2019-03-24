@@ -3,7 +3,12 @@ use std::collections::HashMap;
 use specs::{world::Builder, Dispatcher, DispatcherBuilder, World};
 use tiled::Map;
 
-use crate::components::{entity_lookup::EntityLookup, map::tiled::TiledMap, node::Node};
+use crate::{
+    components::{
+        entity_lookup::EntityLookup, map::tiled::TiledMap, node::Node, transform::Transform,
+    },
+    SCREEN_HEIGHT, SCREEN_WIDTH,
+};
 
 use super::Screen;
 
@@ -27,15 +32,33 @@ impl<'a> Play<'a> {
 
 impl<'a> Screen for Play<'a> {
     fn setup(&mut self, world: &mut World) {
-        let root = world.create_entity().with(Node::new()).build();
+        let root = world
+            .create_entity()
+            .with(Transform::visible(
+                0.0,
+                0.0,
+                0.0,
+                SCREEN_WIDTH as u16,
+                SCREEN_HEIGHT as u16,
+            ))
+            .with(Node::new())
+            .build();
 
-        world
+        let mut children = Vec::new();
+
+        let entity = world
             .create_entity()
             .with(TiledMap::new(
                 self.tiled_maps.get(&"demomap".to_string()).unwrap(),
             ))
             .with(Node::with_parent(root))
             .build();
+
+        children.push(entity);
+
+        let mut node_storage = world.write_storage::<Node>();
+        let node = node_storage.get_mut(root).unwrap();
+        node.add_many(children);
 
         let mut lookup = world.write_resource::<EntityLookup>();
         lookup.insert("root", root);
