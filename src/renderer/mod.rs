@@ -137,6 +137,64 @@ where
         )
     }
 
+    /**
+     * Draw an arbitrary batch of data, with a texture
+     */
+    pub fn draw_batch<F, C>(
+        &mut self,
+        batch: &Vec<Vertex>,
+        encoder: &mut gfx::Encoder<R, C>,
+        world: &World,
+        factory: &mut F,
+        spritesheet_map: &SpritesheetMap<R>,
+        texture_name: &String,
+        texture: &Texture<R>,
+    ) where
+        R: gfx::Resources,
+        C: gfx::CommandBuffer<R>,
+        F: gfx::Factory<R>,
+    {
+        let camera_res = world.read_resource::<Camera>();
+        let camera = camera_res.deref();
+        // flush renderer batch if it has stuff
+        self.flush(encoder, factory, spritesheet_map, &camera, texture_name);
+
+        self.last_sheet = texture_name.to_owned();
+
+        // setting capacity to 1.5x, as we have 6 indicies per 4 vertices
+        let mut index_data: Vec<u32> = Vec::with_capacity((batch.len() as f32 * 1.5) as usize);
+        let mut offset = 0;
+        batch.chunks(4).fold(&mut index_data, |data, _| {
+            data.append(&mut vec![
+                0 + offset,
+                1 + offset,
+                2 + offset,
+                2 + offset,
+                3 + offset,
+                0 + offset,
+            ]);
+            offset += 4;
+            data
+        });
+        let (vbuf, slice) = factory.create_vertex_buffer_with_slice(&self.batch, &index_data[..]);
+
+        let tex = self.create_drawable_texture(factory, texture);
+        let params = pipe::Data {
+            vbuf: vbuf,
+            projection_cb: factory.create_constant_buffer(1),
+            tex,
+            out: self.target.color.clone(),
+            depth: self.target.depth.clone(),
+        };
+
+        self.projection.proj = (*camera).0.into();
+
+        self.projection.model = self.model.into();
+
+        encoder.update_constant_buffer(&params.projection_cb, &self.projection);
+        encoder.draw(&slice, &self.pso, &params);
+    }
+
     fn draw_verticies<F, C>(
         &mut self,
         encoder: &mut gfx::Encoder<R, C>,
@@ -184,11 +242,12 @@ where
         factory: &mut F,
         spritesheet_map: &SpritesheetMap<R>,
         camera: &Camera,
+        current_sheet: &str,
     ) where
         C: gfx::CommandBuffer<R>,
         F: gfx::Factory<R>,
     {
-        if self.batch.len() > 0 {
+        if self.batch.len() > 0 && self.last_sheet != current_sheet {
             let texture = if self.last_sheet == "white_texture" {
                 self.color_texture.clone()
             } else {
@@ -233,11 +292,9 @@ where
 
         if let Some(frame_name) = frame_name {
             let sheet_name = spritesheet_map.frame_to_sheet_name.get(frame_name).unwrap();
-            if self.last_sheet != *sheet_name {
-                self.flush(encoder, factory, spritesheet_map, camera);
-                self.last_sheet = sheet_name.clone();
-            }
-            let (spritesheet, texture) = spritesheet_map.sheet_name_map.get(sheet_name).unwrap();
+            self.flush(encoder, factory, spritesheet_map, camera, &sheet_name);
+            self.last_sheet = sheet_name.clone();
+            let (spritesheet, _) = spritesheet_map.sheet_name_map.get(sheet_name).unwrap();
             let region = spritesheet
                 .frames
                 .iter()
@@ -250,16 +307,7 @@ where
             tx2 = (region.frame.x as f32 + region.frame.w as f32) / sw;
             ty2 = (region.frame.y as f32 + region.frame.h as f32) / sh;
         } else {
-            if self.batch.len() > 0 && self.last_sheet != "white_texture" {
-                let (_, texture) = spritesheet_map
-                    .sheet_name_map
-                    .get(&self.last_sheet)
-                    .unwrap();
-
-                let texture = self.create_drawable_texture(factory, texture);
-                self.draw_verticies(encoder, factory, texture, &camera);
-                self.batch.clear();
-            }
+            self.flush(encoder, factory, spritesheet_map, camera, "white_texture");
             self.last_sheet = "white_texture".to_string();
         };
 

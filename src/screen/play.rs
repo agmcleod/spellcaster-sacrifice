@@ -52,6 +52,13 @@ impl<'a> Screen for Play<'a> {
                 self.tiled_maps.get(&"demomap".to_string()).unwrap(),
             ))
             .with(Node::with_parent(root))
+            .with(Transform::visible(
+                0.0,
+                0.0,
+                0.0,
+                SCREEN_WIDTH as u16,
+                SCREEN_HEIGHT as u16,
+            ))
             .build();
 
         children.push(entity);

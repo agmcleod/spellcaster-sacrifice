@@ -26,8 +26,8 @@ impl ScreenManager {
         }
     }
 
-    pub fn add_state(&mut self, name: String, Screen: Box<Screen>) {
-        self.states.insert(name, Screen);
+    pub fn add_state(&mut self, name: String, screen: Box<Screen>) {
+        self.states.insert(name, screen);
     }
 
     pub fn cleanup_state(&self, world: &mut World) {

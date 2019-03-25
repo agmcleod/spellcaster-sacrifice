@@ -109,6 +109,10 @@ fn main() -> Result<(), String> {
         }
 
         screen_manager.update(&mut world);
+        world.maintain();
+
+        encoder.clear(&target.color, [0.1, 0.2, 0.3, 1.0]);
+        encoder.clear_depth(&target.depth, 1.0);
 
         {
             let sprite_storage = world.read_storage::<Sprite>();
@@ -118,6 +122,7 @@ fn main() -> Result<(), String> {
             let text_storage = world.read_storage::<Text>();
             let shape_storage = world.read_storage::<Shape>();
             let mut node_storage = world.write_storage::<Node>();
+            let tiled_map_storage = world.read_storage::<TiledMap>();
 
             let root_entity = {
                 let lookup = world.read_resource::<EntityLookup>();
@@ -131,6 +136,7 @@ fn main() -> Result<(), String> {
                 &world,
                 &mut factory,
                 &spritesheet_map,
+                &map_tilesets,
                 &mut glyph_brush,
                 &sprite_storage,
                 &mut transform_storage,
@@ -138,17 +144,18 @@ fn main() -> Result<(), String> {
                 &color_storage,
                 &text_storage,
                 &shape_storage,
+                &tiled_map_storage,
                 &mut node_storage,
                 &(1.0, 1.0),
             );
         }
 
-        // draw a frame
-        encoder.clear(&target.color, [0.1, 0.2, 0.3, 1.0]);
         // <- draw actual stuff here
         encoder.flush(&mut device);
         window.gl_swap_window();
         device.cleanup();
+
+        renderer.reset_transform();
 
         let mut state_change = {
             let mut state_change_storage = world.write_resource::<ScreenChange>();

@@ -1,14 +1,17 @@
 use gfx_glyph::GlyphBrush;
 use sdl2::keyboard::Keycode;
 use specs::{Entity, ReadStorage, World, WriteStorage};
+use std::collections::HashMap;
 
 use crate::{
     assets::spritesheet_map::SpritesheetMap,
     components::{
         animation_sheet::AnimationSheet, camera::Camera, color::Color, delta_time::DeltaTime,
-        entity_lookup::EntityLookup, input::Input, map::tiled::TiledMap, node::Node, shape::Shape,
-        sprite::Sprite, text::Text, transform::Transform,
+        entity_lookup::EntityLookup, input::Input, map::tiled::TiledMap, node::Node,
+        screen_change::ScreenChange, shape::Shape, sprite::Sprite, text::Text,
+        transform::Transform,
     },
+    loader::Texture,
     renderer::{get_ortho, Renderer},
 };
 
@@ -17,9 +20,11 @@ pub fn setup_world(world: &mut World) {
     world.add_resource(Camera(get_ortho()));
     world.add_resource(EntityLookup::new());
     world.add_resource(Input::new(1.0, vec![Keycode::Escape]));
+    world.add_resource(ScreenChange::new());
 
     world.register::<AnimationSheet>();
     world.register::<Color>();
+    world.register::<Node>();
     world.register::<Shape>();
     world.register::<Sprite>();
     world.register::<Text>();
@@ -33,6 +38,7 @@ pub fn render_entity<R: gfx::Resources, C: gfx::CommandBuffer<R>, F: gfx::Factor
     world: &World,
     factory: &mut F,
     spritesheet: &SpritesheetMap<R>,
+    map_tilesets: &HashMap<String, Texture<R>>,
     glyph_brush: &mut GlyphBrush<R, F>,
     entity: &Entity,
     sprite_storage: &ReadStorage<Sprite>,
@@ -41,6 +47,7 @@ pub fn render_entity<R: gfx::Resources, C: gfx::CommandBuffer<R>, F: gfx::Factor
     color_storage: &ReadStorage<Color>,
     text_storage: &ReadStorage<Text>,
     shape_storage: &ReadStorage<Shape>,
+    tiled_map_storage: &ReadStorage<TiledMap>,
     scale_from_base_res: &(f32, f32),
 ) {
     if let Some(transform) = transform_storage.get_mut(*entity) {
@@ -88,6 +95,22 @@ pub fn render_entity<R: gfx::Resources, C: gfx::CommandBuffer<R>, F: gfx::Factor
             if let Some(shape) = shape_storage.get(*entity) {
                 renderer.render_shape(encoder, world, factory, &shape);
             }
+
+            if let Some(tile_map) = tiled_map_storage.get(*entity) {
+                if let Some(texture) = map_tilesets.get(&tile_map.tileset) {
+                    renderer.draw_batch(
+                        &tile_map.data,
+                        encoder,
+                        world,
+                        factory,
+                        spritesheet,
+                        &tile_map.tileset,
+                        texture,
+                    );
+                } else {
+                    panic!("Could not find texture by name {}", tile_map.tileset);
+                }
+            }
         }
     }
 }
@@ -99,6 +122,7 @@ pub fn prepare_node<R: gfx::Resources, C: gfx::CommandBuffer<R>, F: gfx::Factory
     world: &World,
     factory: &mut F,
     spritesheet: &SpritesheetMap<R>,
+    map_tilesets: &HashMap<String, Texture<R>>,
     glyph_brush: &mut GlyphBrush<R, F>,
     sprite_storage: &ReadStorage<Sprite>,
     transform_storage: &mut WriteStorage<Transform>,
@@ -106,6 +130,7 @@ pub fn prepare_node<R: gfx::Resources, C: gfx::CommandBuffer<R>, F: gfx::Factory
     color_storage: &ReadStorage<Color>,
     text_storage: &ReadStorage<Text>,
     shape_storage: &ReadStorage<Shape>,
+    tiled_map_storage: &ReadStorage<TiledMap>,
     node_storage: &mut WriteStorage<Node>,
     scale_from_base_res: &(f32, f32),
 ) {
@@ -121,6 +146,7 @@ pub fn prepare_node<R: gfx::Resources, C: gfx::CommandBuffer<R>, F: gfx::Factory
         world,
         factory,
         spritesheet,
+        map_tilesets,
         glyph_brush,
         &entity,
         sprite_storage,
@@ -129,6 +155,7 @@ pub fn prepare_node<R: gfx::Resources, C: gfx::CommandBuffer<R>, F: gfx::Factory
         color_storage,
         text_storage,
         shape_storage,
+        tiled_map_storage,
         scale_from_base_res,
     );
 
@@ -146,6 +173,7 @@ pub fn prepare_node<R: gfx::Resources, C: gfx::CommandBuffer<R>, F: gfx::Factory
             world,
             factory,
             spritesheet,
+            map_tilesets,
             glyph_brush,
             sprite_storage,
             transform_storage,
@@ -153,6 +181,7 @@ pub fn prepare_node<R: gfx::Resources, C: gfx::CommandBuffer<R>, F: gfx::Factory
             color_storage,
             text_storage,
             shape_storage,
+            tiled_map_storage,
             node_storage,
             scale_from_base_res,
         );
