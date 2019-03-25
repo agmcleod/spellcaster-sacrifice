@@ -176,7 +176,7 @@ where
             offset += 4;
             data
         });
-        let (vbuf, slice) = factory.create_vertex_buffer_with_slice(&self.batch, &index_data[..]);
+        let (vbuf, slice) = factory.create_vertex_buffer_with_slice(&batch, &index_data[..]);
 
         let tex = self.create_drawable_texture(factory, texture);
         let params = pipe::Data {
