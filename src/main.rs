@@ -4,6 +4,7 @@ extern crate gfx;
 use std::collections::HashMap;
 use std::time;
 
+use cgmath::Vector3;
 use gfx::Device;
 use gfx_glyph::GlyphBrushBuilder;
 use gfx_window_sdl;
@@ -12,6 +13,7 @@ use specs::World;
 
 mod assets;
 mod components;
+mod entities;
 mod loader;
 mod renderer;
 mod scene_graph;
@@ -22,15 +24,14 @@ mod world;
 
 use assets::spritesheet_map::SpritesheetMap;
 use components::{
-    animation_sheet::AnimationSheet, color::Color, delta_time::DeltaTime,
-    entity_lookup::EntityLookup, map::tiled::TiledMap, node::Node, screen_change::ScreenChange,
-    shape::Shape, sprite::Sprite, text::Text, transform::Transform,
+    tiled::TiledMap, AnimationSheet, Camera, Color, DeltaTime, EntityLookup, Node, ScreenChange,
+    Shape, Sprite, Text, Transform,
 };
 use screen::{play::Play, ScreenManager};
-use world::{prepare_node, setup_world};
+use world::{render_from_node, setup_world};
 
-const SCREEN_WIDTH: u32 = 1280;
-const SCREEN_HEIGHT: u32 = 720;
+const SCREEN_WIDTH: u32 = 960;
+const SCREEN_HEIGHT: u32 = 480;
 
 fn main() -> Result<(), String> {
     let sdl_context = sdl2::init()?;
@@ -68,7 +69,7 @@ fn main() -> Result<(), String> {
         GlyphBrushBuilder::using_font_bytes(include_bytes!("../resources/Arial.ttf") as &[u8])
             .build(factory.clone());
 
-    let spritesheet_map = SpritesheetMap::new(&mut factory, &[]);
+    let spritesheet_map = SpritesheetMap::new(&mut factory, &["assets"]);
 
     let mut screen_manager = ScreenManager::new();
     screen_manager.add_state(Play::get_name(), Box::new(Play::new(tiled_maps)));
@@ -129,7 +130,9 @@ fn main() -> Result<(), String> {
                 lookup.entities.get("root").unwrap().clone()
             };
 
-            prepare_node(
+            let mut offset_position = Vector3::<f32>::new(0.0, 0.0, 0.0);
+
+            render_from_node(
                 &mut renderer,
                 &mut encoder,
                 root_entity,
@@ -146,16 +149,23 @@ fn main() -> Result<(), String> {
                 &shape_storage,
                 &tiled_map_storage,
                 &mut node_storage,
+                &mut offset_position,
                 &(1.0, 1.0),
             );
         }
 
         // <- draw actual stuff here
+        renderer.flush(
+            &mut encoder,
+            &mut factory,
+            &spritesheet_map,
+            &world.read_resource::<Camera>(),
+            "",
+            true,
+        );
         encoder.flush(&mut device);
         window.gl_swap_window();
         device.cleanup();
-
-        renderer.reset_transform();
 
         let mut state_change = {
             let mut state_change_storage = world.write_resource::<ScreenChange>();

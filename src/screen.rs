@@ -1,7 +1,7 @@
 use specs::World;
 use std::collections::HashMap;
 
-use crate::components::screen_change::ScreenChange;
+use crate::components::ScreenChange;
 
 pub mod play;
 

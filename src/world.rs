@@ -1,3 +1,4 @@
+use cgmath::Vector3;
 use gfx_glyph::GlyphBrush;
 use sdl2::keyboard::Keycode;
 use specs::{Entity, ReadStorage, World, WriteStorage};
@@ -6,10 +7,8 @@ use std::collections::HashMap;
 use crate::{
     assets::spritesheet_map::SpritesheetMap,
     components::{
-        animation_sheet::AnimationSheet, camera::Camera, color::Color, delta_time::DeltaTime,
-        entity_lookup::EntityLookup, input::Input, map::tiled::TiledMap, node::Node,
-        screen_change::ScreenChange, shape::Shape, sprite::Sprite, text::Text,
-        transform::Transform,
+        tiled::TiledMap, AnimationSheet, Camera, Color, DeltaTime, EntityLookup, Input, Node,
+        ScreenChange, Shape, Sprite, Text, Transform,
     },
     loader::Texture,
     renderer::{get_ortho, Renderer},
@@ -32,7 +31,7 @@ pub fn setup_world(world: &mut World) {
     world.register::<Transform>();
 }
 
-pub fn render_entity<R: gfx::Resources, C: gfx::CommandBuffer<R>, F: gfx::Factory<R>>(
+fn render_entity<R: gfx::Resources, C: gfx::CommandBuffer<R>, F: gfx::Factory<R>>(
     renderer: &mut Renderer<R>,
     encoder: &mut gfx::Encoder<R, C>,
     world: &World,
@@ -48,74 +47,74 @@ pub fn render_entity<R: gfx::Resources, C: gfx::CommandBuffer<R>, F: gfx::Factor
     text_storage: &ReadStorage<Text>,
     shape_storage: &ReadStorage<Shape>,
     tiled_map_storage: &ReadStorage<TiledMap>,
+    offset_position: &mut Vector3<f32>,
     scale_from_base_res: &(f32, f32),
 ) {
-    if let Some(transform) = transform_storage.get_mut(*entity) {
-        if transform.visible {
-            if let Some(sprite) = sprite_storage.get(*entity) {
-                renderer.render(
+    if let Some(transform) = transform_storage.get(*entity) {
+        if let Some(sprite) = sprite_storage.get(*entity) {
+            renderer.render(
+                encoder,
+                world,
+                factory,
+                &transform,
+                Some(&sprite.frame_name),
+                spritesheet,
+                color_storage.get(*entity),
+                offset_position,
+            );
+        }
+
+        if let Some(animation) = animation_storage.get(*entity) {
+            renderer.render(
+                encoder,
+                world,
+                factory,
+                &transform,
+                Some(animation.get_current_frame()),
+                spritesheet,
+                color_storage.get(*entity),
+                offset_position,
+            );
+        }
+
+        if let (Some(color), Some(text)) = (color_storage.get(*entity), text_storage.get(*entity)) {
+            if text.text != "" && text.visible {
+                renderer.render_text(
+                    encoder,
+                    &text,
+                    transform,
+                    color,
+                    glyph_brush,
+                    world.read_resource::<Input>().hidpi_factor,
+                    scale_from_base_res,
+                    offset_position,
+                );
+            }
+        }
+
+        if let Some(shape) = shape_storage.get(*entity) {
+            renderer.render_shape(encoder, world, factory, &shape);
+        }
+
+        if let Some(tile_map) = tiled_map_storage.get(*entity) {
+            if let Some(texture) = map_tilesets.get(&tile_map.tileset) {
+                renderer.draw_batch(
+                    &tile_map.data,
                     encoder,
                     world,
                     factory,
-                    &transform,
-                    Some(&sprite.frame_name),
                     spritesheet,
-                    color_storage.get(*entity),
+                    &tile_map.tileset,
+                    texture,
                 );
-            }
-
-            if let Some(animation) = animation_storage.get(*entity) {
-                renderer.render(
-                    encoder,
-                    world,
-                    factory,
-                    &transform,
-                    Some(animation.get_current_frame()),
-                    spritesheet,
-                    color_storage.get(*entity),
-                );
-            }
-
-            if let (Some(color), Some(text)) =
-                (color_storage.get(*entity), text_storage.get(*entity))
-            {
-                if text.text != "" && text.visible {
-                    renderer.render_text(
-                        encoder,
-                        &text,
-                        transform,
-                        color,
-                        glyph_brush,
-                        world.read_resource::<Input>().hidpi_factor,
-                        scale_from_base_res,
-                    );
-                }
-            }
-
-            if let Some(shape) = shape_storage.get(*entity) {
-                renderer.render_shape(encoder, world, factory, &shape);
-            }
-
-            if let Some(tile_map) = tiled_map_storage.get(*entity) {
-                if let Some(texture) = map_tilesets.get(&tile_map.tileset) {
-                    renderer.draw_batch(
-                        &tile_map.data,
-                        encoder,
-                        world,
-                        factory,
-                        spritesheet,
-                        &tile_map.tileset,
-                        texture,
-                    );
-                } else {
-                    panic!("Could not find texture by name {}", tile_map.tileset);
-                }
+            } else {
+                panic!("Could not find texture by name {}", tile_map.tileset);
             }
         }
     }
 }
 
-pub fn prepare_node<R: gfx::Resources, C: gfx::CommandBuffer<R>, F: gfx::Factory<R>>(
+pub fn render_from_node<R: gfx::Resources, C: gfx::CommandBuffer<R>, F: gfx::Factory<R>>(
     renderer: &mut Renderer<R>,
     encoder: &mut gfx::Encoder<R, C>,
     entity: Entity,
@@ -132,14 +131,20 @@ pub fn prepare_node<R: gfx::Resources, C: gfx::CommandBuffer<R>, F: gfx::Factory
     shape_storage: &ReadStorage<Shape>,
     tiled_map_storage: &ReadStorage<TiledMap>,
     node_storage: &mut WriteStorage<Node>,
+    offset_position: &mut Vector3<f32>,
     scale_from_base_res: &(f32, f32),
 ) {
     if let Some(transform) = transform_storage.get(entity) {
         if !transform.visible {
             return;
         }
-        renderer.transform(&transform, false);
+
+        let pos = transform.get_pos();
+        offset_position.x += pos.x;
+        offset_position.y += pos.y;
+        offset_position.z += pos.z;
     }
+
     render_entity(
         renderer,
         encoder,
@@ -156,6 +161,7 @@ pub fn prepare_node<R: gfx::Resources, C: gfx::CommandBuffer<R>, F: gfx::Factory
         text_storage,
         shape_storage,
         tiled_map_storage,
+        offset_position,
         scale_from_base_res,
     );
 
@@ -166,7 +172,7 @@ pub fn prepare_node<R: gfx::Resources, C: gfx::CommandBuffer<R>, F: gfx::Factory
     }
 
     for entity in &entities {
-        prepare_node(
+        render_from_node(
             renderer,
             encoder,
             *entity,
@@ -183,11 +189,15 @@ pub fn prepare_node<R: gfx::Resources, C: gfx::CommandBuffer<R>, F: gfx::Factory
             shape_storage,
             tiled_map_storage,
             node_storage,
+            offset_position,
             scale_from_base_res,
         );
     }
 
     if let Some(transform) = transform_storage.get(entity) {
-        renderer.transform(&transform, true);
+        let pos = transform.get_pos();
+        offset_position.x -= pos.x;
+        offset_position.y -= pos.y;
+        offset_position.z -= pos.z;
     }
 }

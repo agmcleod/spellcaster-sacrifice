@@ -4,10 +4,8 @@ use specs::{world::Builder, Dispatcher, DispatcherBuilder, World};
 use tiled::Map;
 
 use crate::{
-    components::{
-        entity_lookup::EntityLookup, map::tiled::TiledMap, node::Node, transform::Transform,
-    },
-    SCREEN_HEIGHT, SCREEN_WIDTH,
+    components::{tiled::TiledMap, EntityLookup, Node, Transform},
+    entities, SCREEN_HEIGHT, SCREEN_WIDTH,
 };
 
 use super::Screen;
@@ -46,11 +44,11 @@ impl<'a> Screen for Play<'a> {
 
         let mut children = Vec::new();
 
+        let demomap = self.tiled_maps.get(&"demomap".to_string()).unwrap();
+
         let entity = world
             .create_entity()
-            .with(TiledMap::new(
-                self.tiled_maps.get(&"demomap".to_string()).unwrap(),
-            ))
+            .with(TiledMap::new(demomap))
             .with(Node::with_parent(root))
             .with(Transform::visible(
                 0.0,
@@ -60,12 +58,14 @@ impl<'a> Screen for Play<'a> {
                 SCREEN_HEIGHT as u16,
             ))
             .build();
-
         children.push(entity);
+
+        let entities_from_map = entities::build_from_map(world, &demomap);
 
         let mut node_storage = world.write_storage::<Node>();
         let node = node_storage.get_mut(root).unwrap();
         node.add_many(children);
+        node.add_many(entities_from_map);
 
         let mut lookup = world.write_resource::<EntityLookup>();
         lookup.insert("root", root);

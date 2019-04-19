@@ -1,7 +1,6 @@
 use std::cmp;
 
-use cgmath::Vector3;
-use specs::{Component, Entity, ReadStorage, VecStorage, World, WriteStorage};
+use specs::{Component, Entity, VecStorage, World, WriteStorage};
 
 use crate::components::transform::Transform;
 

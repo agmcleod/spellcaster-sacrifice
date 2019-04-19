@@ -1,6 +1,6 @@
 use serde_derive::{Deserialize, Serialize};
 
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct FrameData {
     pub x: usize,
     pub y: usize,
@@ -8,13 +8,13 @@ pub struct FrameData {
     pub h: usize,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct Size {
     pub w: usize,
     pub h: usize,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Frame {
     pub filename: String,
@@ -25,12 +25,12 @@ pub struct Frame {
     pub source_size: Size,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct Meta {
     pub size: Size,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct Spritesheet {
     pub frames: Vec<Frame>,
     pub meta: Meta,

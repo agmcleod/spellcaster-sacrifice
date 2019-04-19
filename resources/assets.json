@@ -1,0 +1,20 @@
+{"frames": [
+
+{
+	"filename": "player-down.png",
+	"frame": {"x":1,"y":1,"w":15,"h":32},
+	"rotated": false,
+	"trimmed": true,
+	"spriteSourceSize": {"x":8,"y":0,"w":15,"h":32},
+	"sourceSize": {"w":32,"h":32}
+}],
+"meta": {
+	"app": "https://www.codeandweb.com/texturepacker",
+	"version": "1.0",
+	"image": "assets.png",
+	"format": "RGBA8888",
+	"size": {"w":17,"h":34},
+	"scale": "1",
+	"smartupdate": "$TexturePacker:SmartUpdate:bb81770b2f23e6f1f9b3fbc2eae70c05:66ab15eebb7d6e6bcff0f13e693d34b8:a759b6bbc8381ac9c472b28f589ad0d6$"
+}
+}

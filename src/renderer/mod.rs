@@ -1,6 +1,6 @@
 use std::ops::Deref;
 
-use cgmath::{ortho, Matrix4, SquareMatrix, Transform};
+use cgmath::{ortho, Matrix4, SquareMatrix, Vector3};
 use gfx::{self, texture, traits::FactoryExt};
 use gfx_glyph::{GlyphBrush, Layout, Section};
 use specs::World;
@@ -8,10 +8,7 @@ use specs::World;
 use crate::{
     assets::spritesheet::Frame,
     assets::spritesheet_map::SpritesheetMap,
-    components::{
-        camera::Camera, color::Color, shape::Shape, text::Text,
-        transform::Transform as ComponentTransform,
-    },
+    components::{Camera, Color, Shape, Text, Transform as ComponentTransform},
     loader::Texture,
     SCREEN_HEIGHT, SCREEN_WIDTH,
 };
@@ -157,7 +154,14 @@ where
         let camera_res = world.read_resource::<Camera>();
         let camera = camera_res.deref();
         // flush renderer batch if it has stuff
-        self.flush(encoder, factory, spritesheet_map, &camera, texture_name);
+        self.flush(
+            encoder,
+            factory,
+            spritesheet_map,
+            &camera,
+            texture_name,
+            false,
+        );
 
         self.last_sheet = texture_name.to_owned();
 
@@ -209,15 +213,20 @@ where
         C: gfx::CommandBuffer<R>,
         F: gfx::Factory<R>,
     {
-        let offset: u32 = (self.batch.len() * 4) as u32;
-        let index_data: Vec<u32> = vec![
-            0 + offset,
-            1 + offset,
-            2 + offset,
-            2 + offset,
-            3 + offset,
-            0 + offset,
-        ];
+        // initialize as 1.5x, since we use 6 indices for 4 vertices
+        let mut index_data: Vec<u32> = Vec::with_capacity((self.batch.len() as f32 * 1.5) as usize);
+
+        let mut offset = 0;
+        for _ in self.batch.chunks(4) {
+            index_data.push(0 + offset);
+            index_data.push(1 + offset);
+            index_data.push(2 + offset);
+            index_data.push(2 + offset);
+            index_data.push(3 + offset);
+            index_data.push(0 + offset);
+            offset += 4;
+        }
+
         let (vbuf, slice) = factory.create_vertex_buffer_with_slice(&self.batch, &index_data[..]);
 
         let params = pipe::Data {
@@ -243,11 +252,12 @@ where
         spritesheet_map: &SpritesheetMap<R>,
         camera: &Camera,
         current_sheet: &str,
+        force: bool,
     ) where
         C: gfx::CommandBuffer<R>,
         F: gfx::Factory<R>,
     {
-        if self.batch.len() > 0 && self.last_sheet != current_sheet {
+        if self.batch.len() > 0 && (self.last_sheet != current_sheet || force) {
             let texture = if self.last_sheet == "white_texture" {
                 self.color_texture.clone()
             } else {
@@ -255,16 +265,13 @@ where
                     .sheet_name_map
                     .get(&self.last_sheet)
                     .unwrap();
+
                 self.create_drawable_texture(factory, texture)
             };
 
             self.draw_verticies(encoder, factory, texture, &camera);
             self.batch.clear();
         }
-    }
-
-    pub fn reset_transform(&mut self) {
-        self.model = Matrix4::identity().into();
     }
 
     pub fn render<C, F>(
@@ -276,6 +283,7 @@ where
         frame_name: Option<&String>,
         spritesheet_map: &SpritesheetMap<R>,
         color: Option<&Color>,
+        offset_position: &Vector3<f32>,
     ) where
         C: gfx::CommandBuffer<R>,
         F: gfx::Factory<R>,
@@ -292,7 +300,14 @@ where
 
         if let Some(frame_name) = frame_name {
             let sheet_name = spritesheet_map.frame_to_sheet_name.get(frame_name).unwrap();
-            self.flush(encoder, factory, spritesheet_map, camera, &sheet_name);
+            self.flush(
+                encoder,
+                factory,
+                spritesheet_map,
+                camera,
+                &sheet_name,
+                false,
+            );
             self.last_sheet = sheet_name.clone();
             let (spritesheet, _) = spritesheet_map.sheet_name_map.get(sheet_name).unwrap();
             let region = spritesheet
@@ -307,7 +322,14 @@ where
             tx2 = (region.frame.x as f32 + region.frame.w as f32) / sw;
             ty2 = (region.frame.y as f32 + region.frame.h as f32) / sh;
         } else {
-            self.flush(encoder, factory, spritesheet_map, camera, "white_texture");
+            self.flush(
+                encoder,
+                factory,
+                spritesheet_map,
+                camera,
+                "white_texture",
+                false,
+            );
             self.last_sheet = "white_texture".to_string();
         };
 
@@ -317,7 +339,19 @@ where
             [1.0; 4]
         };
 
-        add_quad_to_batch(&mut self.batch, color, w, h, tx, ty, tx2, ty2);
+        add_quad_to_batch(
+            &mut self.batch,
+            color,
+            offset_position.x,
+            offset_position.y,
+            offset_position.z,
+            w,
+            h,
+            tx,
+            ty,
+            tx2,
+            ty2,
+        );
     }
 
     pub fn render_shape<C, F>(
@@ -364,12 +398,12 @@ where
         glyph_brush: &mut GlyphBrush<R, F>,
         hidpi_factor: f32,
         scale_from_base_res: &(f32, f32),
+        offset_position: &Vector3<f32>,
     ) where
         R: gfx::Resources,
         C: gfx::CommandBuffer<R>,
         F: gfx::Factory<R>,
     {
-        let absolute_pos = transform.get_absolute_pos();
         let mut scale = text.scale.clone();
         scale.x *= hidpi_factor * scale_from_base_res.0;
         scale.y *= hidpi_factor * scale_from_base_res.1;
@@ -381,8 +415,8 @@ where
                 text.size.y as f32 * hidpi_factor,
             ),
             screen_position: (
-                absolute_pos.x * hidpi_factor * scale_from_base_res.0,
-                absolute_pos.y * hidpi_factor * scale_from_base_res.1,
+                offset_position.x * hidpi_factor * scale_from_base_res.0,
+                offset_position.y * hidpi_factor * scale_from_base_res.1,
             ),
             color: color.0,
             z: 0.0,
@@ -395,21 +429,14 @@ where
             .draw_queued(encoder, &self.target.color, &self.target.depth)
             .unwrap();
     }
-
-    pub fn transform(&mut self, transform: &ComponentTransform, undo: bool) {
-        let mut transform_mat = Matrix4::from_translation(*transform.get_pos());
-        if undo {
-            transform_mat = transform_mat.inverse_transform().unwrap();
-            self.model = self.model.concat(&transform_mat);
-        } else {
-            self.model = self.model.concat(&transform_mat);
-        }
-    }
 }
 
 fn add_quad_to_batch(
     batch: &mut Vec<Vertex>,
     color: [f32; 4],
+    x: f32,
+    y: f32,
+    z: f32,
     w: f32,
     h: f32,
     tx: f32,
@@ -418,22 +445,22 @@ fn add_quad_to_batch(
     ty2: f32,
 ) {
     batch.push(Vertex {
-        pos: [0.0, 0.0, 0.0],
+        pos: [x, y, z],
         uv: [tx, ty],
         color: color,
     });
     batch.push(Vertex {
-        pos: [w, 0.0, 0.0],
+        pos: [x + w, y, z],
         uv: [tx2, ty],
         color: color,
     });
     batch.push(Vertex {
-        pos: [w, h, 0.0],
+        pos: [x + w, y + h, z],
         uv: [tx2, ty2],
         color: color,
     });
     batch.push(Vertex {
-        pos: [0.0, h, 0.0],
+        pos: [x, y + h, z],
         uv: [tx, ty2],
         color: color,
     });

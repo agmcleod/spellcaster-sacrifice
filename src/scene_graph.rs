@@ -1,7 +1,7 @@
 use cgmath::Vector3;
 use specs::{Entity, WriteStorage};
 
-use crate::components::{node::Node, transform::Transform};
+use crate::components::{Node, Transform};
 
 pub fn get_absolute_pos(
     entity: Entity,

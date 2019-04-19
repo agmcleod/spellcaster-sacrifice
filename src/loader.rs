@@ -21,13 +21,13 @@ where
     F: gfx::Factory<R>,
     R: gfx::Resources,
 {
-    use gfx::format::Rgba8;
+    use gfx::format::Srgba8;
     let path = get_exe_path().join(path);
     let img = image::open(path).unwrap().to_rgba();
     let (width, height) = img.dimensions();
     let kind = gfx::texture::Kind::D2(width as u16, height as u16, gfx::texture::AaMode::Single);
     let (_, view) = factory
-        .create_texture_immutable_u8::<Rgba8>(kind, Mipmap::Allocated, &[&img])
+        .create_texture_immutable_u8::<Srgba8>(kind, Mipmap::Allocated, &[&img])
         .unwrap();
     (view, width as u16, height as u16)
 }
