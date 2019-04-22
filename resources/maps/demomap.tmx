@@ -29,7 +29,7 @@
   <objectgroup id="4" name="origin">
    <object id="1" name="player" x="50" y="200" width="17" height="32">
     <properties>
-     <property name="frame" value="player-down.png"/>
+     <property name="animation_down" value="player1,player2,player3,player4,player5,player6,player7,player8"/>
     </properties>
    </object>
   </objectgroup>

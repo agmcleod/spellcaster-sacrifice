@@ -21,6 +21,9 @@ impl AnimationSheet {
     }
 
     pub fn add_animation(&mut self, name: String, frames: Vec<String>) {
+        if self.current_animation == "" {
+            self.current_animation = name.clone();
+        }
         self.animations.insert(name, frames);
     }
 

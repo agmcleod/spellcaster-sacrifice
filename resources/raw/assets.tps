@@ -181,16 +181,23 @@
         </struct>
         <key>individualSpriteSettings</key>
         <map type="IndividualSpriteSettingsMap">
-            <key type="filename">player-down.png</key>
+            <key type="filename">player1.png</key>
+            <key type="filename">player2.png</key>
+            <key type="filename">player3.png</key>
+            <key type="filename">player4.png</key>
+            <key type="filename">player5.png</key>
+            <key type="filename">player6.png</key>
+            <key type="filename">player7.png</key>
+            <key type="filename">player8.png</key>
             <struct type="IndividualSpriteSettings">
                 <key>pivotPoint</key>
                 <point_f>0.5,0.5</point_f>
                 <key>scale9Enabled</key>
                 <false/>
                 <key>scale9Borders</key>
-                <rect>16,16,32,32</rect>
+                <rect>8,8,16,16</rect>
                 <key>scale9Paddings</key>
-                <rect>16,16,32,32</rect>
+                <rect>8,8,16,16</rect>
                 <key>scale9FromFile</key>
                 <false/>
             </struct>
