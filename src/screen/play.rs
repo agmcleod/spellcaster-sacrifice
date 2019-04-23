@@ -5,7 +5,9 @@ use tiled::Map;
 
 use crate::{
     components::{tiled::TiledMap, EntityLookup, Node, Transform},
-    entities, SCREEN_HEIGHT, SCREEN_WIDTH,
+    entities,
+    systems::AnimationSystem,
+    SCREEN_HEIGHT, SCREEN_WIDTH,
 };
 
 use super::Screen;
@@ -18,7 +20,9 @@ pub struct Play<'a> {
 impl<'a> Play<'a> {
     pub fn new(tiled_maps: HashMap<String, Map>) -> Self {
         Play {
-            dispatcher: DispatcherBuilder::new().build(),
+            dispatcher: DispatcherBuilder::new()
+                .with(AnimationSystem {}, "animation", &[])
+                .build(),
             tiled_maps,
         }
     }
@@ -71,7 +75,9 @@ impl<'a> Screen for Play<'a> {
         lookup.insert("root", root);
     }
 
-    fn update(&mut self, world: &mut World) {}
+    fn update(&mut self, world: &mut World) {
+        self.dispatcher.dispatch(&mut world.res);
+    }
 
     fn handle_custom_change(&mut self, action: &String, world: &mut World) {}
 }

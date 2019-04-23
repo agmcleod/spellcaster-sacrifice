@@ -45,10 +45,14 @@ fn add_group_to_world(
                     if key.starts_with("animation_") {
                         if let PropertyValue::StringValue(frames) = value {
                             let mut animation = AnimationSheet::new(0.1);
-                            let frames: Vec<String> =
-                                frames.split(",").map(|frame| frame.to_owned()).collect();
+                            let frames: Vec<String> = frames
+                                .split(",")
+                                .map(|frame| format!("{}.png", frame))
+                                .collect();
                             animation
                                 .add_animation(key.replace("animation_", "").to_string(), frames);
+
+                            builder = builder.with(animation);
                         }
                     }
                 }
