@@ -7,33 +7,22 @@ pub struct Transform {
     pub visible: bool,
     absolute_pos: Vector3<f32>,
     pub dirty_pos: bool,
+    pub flip: bool,
 }
 
 impl Transform {
-    pub fn new(
-        x: f32,
-        y: f32,
-        z: f32,
-        w: u16,
-        h: u16,
-        visible: bool,
-    ) -> Transform {
+    pub fn new(x: f32, y: f32, z: f32, w: u16, h: u16, visible: bool) -> Transform {
         Transform {
             pos: Vector3 { x, y, z },
             size: Vector2 { x: w, y: h },
             visible,
             absolute_pos: Vector3 { x, y, z },
             dirty_pos: true,
+            flip: false,
         }
     }
 
-    pub fn visible(
-        x: f32,
-        y: f32,
-        z: f32,
-        w: u16,
-        h: u16,
-    ) -> Transform {
+    pub fn visible(x: f32, y: f32, z: f32, w: u16, h: u16) -> Transform {
         Self::new(x, y, z, w, h, true)
     }
 
@@ -61,6 +50,16 @@ impl Transform {
         self.pos.x = x;
         self.pos.y = y;
         self.pos.z = z;
+        self.dirty_pos = true;
+    }
+
+    pub fn translate_x(&mut self, x: f32) {
+        self.pos.x += x;
+        self.dirty_pos = true;
+    }
+
+    pub fn translate_y(&mut self, y: f32) {
+        self.pos.y += y;
         self.dirty_pos = true;
     }
 

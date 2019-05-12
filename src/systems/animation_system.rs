@@ -20,6 +20,9 @@ impl<'a> System<'a> for AnimationSystem {
         let dt = delta_time_storage.deref().dt;
 
         for animation_sheet in (&mut animation_sheet_storage).join() {
+            if !animation_sheet.playing {
+                continue;
+            }
             animation_sheet.time_passed += dt;
             if animation_sheet.time_passed >= animation_sheet.frame_length {
                 animation_sheet.current_index += 1;

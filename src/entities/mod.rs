@@ -1,7 +1,7 @@
 use specs::{world::Builder, Entity, World};
 use tiled::{Group, Map, ObjectGroup, ObjectShape, PropertyValue};
 
-use crate::components::{AnimationSheet, Node, Sprite, Transform};
+use crate::components::{AnimationSheet, Node, Player, Sprite, Transform};
 
 fn add_group_to_world(
     world: &mut World,
@@ -41,20 +41,28 @@ fn add_group_to_world(
                     }
                 }
 
+                if object.properties.get("type")
+                    == Some(&PropertyValue::StringValue("player".to_string()))
+                {
+                    builder = builder.with(Player::new());
+                }
+
+                let mut animation = AnimationSheet::new(0.1);
                 for (key, value) in &object.properties {
                     if key.starts_with("animation_") {
                         if let PropertyValue::StringValue(frames) = value {
-                            let mut animation = AnimationSheet::new(0.1);
                             let frames: Vec<String> = frames
                                 .split(",")
                                 .map(|frame| format!("{}.png", frame))
                                 .collect();
                             animation
                                 .add_animation(key.replace("animation_", "").to_string(), frames);
-
-                            builder = builder.with(animation);
                         }
                     }
+                }
+
+                if animation.animations.len() > 0 {
+                    builder = builder.with(animation);
                 }
 
                 children.push(builder.build());

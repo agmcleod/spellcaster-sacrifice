@@ -106,7 +106,7 @@
             <key>freeSizeMode</key>
             <enum type="AlgorithmSettings::AlgorithmFreeSizeMode">Best</enum>
             <key>sizeConstraints</key>
-            <enum type="AlgorithmSettings::SizeConstraints">AnySize</enum>
+            <enum type="AlgorithmSettings::SizeConstraints">POT</enum>
             <key>forceSquared</key>
             <false/>
             <key>maxRects</key>
@@ -169,7 +169,7 @@
             <key>trimMargin</key>
             <uint>1</uint>
             <key>trimMode</key>
-            <enum type="SpriteSettings::TrimMode">Trim</enum>
+            <enum type="SpriteSettings::TrimMode">None</enum>
             <key>tracerTolerance</key>
             <int>200</int>
             <key>heuristicMask</key>
@@ -189,6 +189,27 @@
             <key type="filename">player6.png</key>
             <key type="filename">player7.png</key>
             <key type="filename">player8.png</key>
+            <key type="filename">player_right1.png</key>
+            <key type="filename">player_right10.png</key>
+            <key type="filename">player_right11.png</key>
+            <key type="filename">player_right12.png</key>
+            <key type="filename">player_right13.png</key>
+            <key type="filename">player_right2.png</key>
+            <key type="filename">player_right3.png</key>
+            <key type="filename">player_right4.png</key>
+            <key type="filename">player_right5.png</key>
+            <key type="filename">player_right6.png</key>
+            <key type="filename">player_right7.png</key>
+            <key type="filename">player_right8.png</key>
+            <key type="filename">player_right9.png</key>
+            <key type="filename">player_up1.png</key>
+            <key type="filename">player_up2.png</key>
+            <key type="filename">player_up3.png</key>
+            <key type="filename">player_up4.png</key>
+            <key type="filename">player_up5.png</key>
+            <key type="filename">player_up6.png</key>
+            <key type="filename">player_up7.png</key>
+            <key type="filename">player_up8.png</key>
             <struct type="IndividualSpriteSettings">
                 <key>pivotPoint</key>
                 <point_f>0.5,0.5</point_f>

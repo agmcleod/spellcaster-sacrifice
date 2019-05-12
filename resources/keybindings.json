@@ -1,0 +1,6 @@
+{
+  "up": ["W", "Up"],
+  "right": ["D", "Right"],
+  "left": ["A", "Left"],
+  "down": ["S", "Down"]
+}

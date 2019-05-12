@@ -8,7 +8,7 @@ use specs::World;
 use crate::{
     assets::spritesheet::Frame,
     assets::spritesheet_map::SpritesheetMap,
-    components::{Camera, Color, Shape, Text, Transform as ComponentTransform},
+    components::{Camera, Color, Shape, Sprite, Text, Transform as ComponentTransform},
     loader::Texture,
     SCREEN_HEIGHT, SCREEN_WIDTH,
 };
@@ -290,15 +290,13 @@ where
     {
         let camera_res = world.read_resource::<Camera>();
         let camera = camera_res.deref();
-        let w = transform.size.x as f32;
-        let h = transform.size.y as f32;
 
         let mut tx = 0.0;
         let mut ty = 0.0;
         let mut tx2 = 1.0;
         let mut ty2 = 1.0;
 
-        if let Some(frame_name) = frame_name {
+        let (w, h) = if let Some(frame_name) = frame_name {
             let sheet_name = spritesheet_map.frame_to_sheet_name.get(frame_name).unwrap();
             self.flush(
                 encoder,
@@ -321,6 +319,17 @@ where
             ty = region.frame.y as f32 / sh;
             tx2 = (region.frame.x as f32 + region.frame.w as f32) / sw;
             ty2 = (region.frame.y as f32 + region.frame.h as f32) / sh;
+
+            if transform.flip {
+                let temp = tx2;
+                tx2 = tx;
+                tx = temp;
+            }
+
+            (
+                region.sprite_source_size.w as f32,
+                region.sprite_source_size.h as f32,
+            )
         } else {
             self.flush(
                 encoder,
@@ -331,6 +340,7 @@ where
                 false,
             );
             self.last_sheet = "white_texture".to_string();
+            (transform.size.x as f32, transform.size.y as f32)
         };
 
         let color = if let Some(color) = color {

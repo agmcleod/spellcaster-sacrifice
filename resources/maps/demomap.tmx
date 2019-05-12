@@ -26,10 +26,13 @@
   <properties>
    <property name="test" value="hi"/>
   </properties>
-  <objectgroup id="4" name="origin">
-   <object id="1" name="player" x="50" y="200" width="17" height="32">
+  <objectgroup id="4" name="main">
+   <object id="1" name="player" x="50" y="200" width="36" height="60">
     <properties>
      <property name="animation_down" value="player1,player2,player3,player4,player5,player6,player7,player8"/>
+     <property name="animation_right" value="player_right1,player_right2,player_right3,player_right4,player_right5,player_right6,player_right7,player_right8,player_right9,player_right10,player_right11,player_right12,player_right13"/>
+     <property name="animation_up" value="player_up1,player_up2,player_up3,player_up4,player_up5,player_up6,player_up7,player_up8"/>
+     <property name="type" value="player"/>
     </properties>
    </object>
   </objectgroup>

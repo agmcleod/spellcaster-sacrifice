@@ -1,14 +1,17 @@
 use cgmath::Vector3;
 use gfx_glyph::GlyphBrush;
 use sdl2::keyboard::Keycode;
+use serde_json::{self, Value};
 use specs::{Entity, ReadStorage, World, WriteStorage};
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
+
+use crate::loader::read_text_from_file;
 
 use crate::{
     assets::spritesheet_map::SpritesheetMap,
     components::{
         tiled::TiledMap, AnimationSheet, Camera, Color, DeltaTime, EntityLookup, Input, Node,
-        ScreenChange, Shape, Sprite, Text, Transform,
+        Player, ScreenChange, Shape, Sprite, Text, Transform,
     },
     loader::Texture,
     renderer::{get_ortho, Renderer},
@@ -18,12 +21,44 @@ pub fn setup_world(world: &mut World) {
     world.add_resource(DeltaTime::default());
     world.add_resource(Camera(get_ortho()));
     world.add_resource(EntityLookup::new());
-    world.add_resource(Input::new(1.0, vec![Keycode::Escape]));
+
+    let keybindings: Value = serde_json::from_str(
+        &read_text_from_file("resources/keybindings.json")
+            .map_err(|_| panic!("Could not find keybindings"))
+            .unwrap(),
+    )
+    .unwrap();
+    let keybindings = keybindings
+        .as_object()
+        .unwrap_or_else(|| panic!("Could not parse keybindings file into object"));
+
+    let mut actions = HashMap::new();
+
+    for (action, keys) in keybindings {
+        let mut key_codes = HashSet::new();
+        let keys = keys.as_array().unwrap();
+        for key in keys {
+            if let Some(key_code) = Keycode::from_name(
+                key.as_str()
+                    .unwrap_or_else(|| panic!("Key {} in keybindings file not string type", key)),
+            ) {
+                key_codes.insert(key_code);
+            } else {
+                panic!("Could not parse Key: {}", key);
+            }
+        }
+
+        actions.insert(action.clone(), key_codes);
+    }
+
+    world.add_resource(Input::new(1.0, actions));
+
     world.add_resource(ScreenChange::new());
 
     world.register::<AnimationSheet>();
     world.register::<Color>();
     world.register::<Node>();
+    world.register::<Player>();
     world.register::<Shape>();
     world.register::<Sprite>();
     world.register::<Text>();

@@ -6,7 +6,7 @@ use tiled::Map;
 use crate::{
     components::{tiled::TiledMap, EntityLookup, Node, Transform},
     entities,
-    systems::AnimationSystem,
+    systems::{AnimationSystem, PlayerSystem},
     SCREEN_HEIGHT, SCREEN_WIDTH,
 };
 
@@ -21,7 +21,8 @@ impl<'a> Play<'a> {
     pub fn new(tiled_maps: HashMap<String, Map>) -> Self {
         Play {
             dispatcher: DispatcherBuilder::new()
-                .with(AnimationSystem {}, "animation", &[])
+                .with(AnimationSystem::new(), "animation", &[])
+                .with(PlayerSystem::new(), "player", &[])
                 .build(),
             tiled_maps,
         }

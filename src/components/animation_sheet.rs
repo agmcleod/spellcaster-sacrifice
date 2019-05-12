@@ -7,6 +7,7 @@ pub struct AnimationSheet {
     pub current_index: usize,
     pub frame_length: f32,
     pub time_passed: f32,
+    pub playing: bool,
 }
 
 impl AnimationSheet {
@@ -17,6 +18,7 @@ impl AnimationSheet {
             current_index: 0,
             frame_length,
             time_passed: 0.0,
+            playing: false,
         }
     }
 
@@ -37,8 +39,11 @@ impl AnimationSheet {
             .unwrap()
     }
 
-    pub fn set_current_animation(&mut self, name: String) {
-        self.current_animation = name;
+    pub fn set_current_animation(&mut self, name: &str) {
+        if !self.animations.contains_key(name) {
+            panic!("No animation for key {}", name);
+        }
+        self.current_animation = name.to_owned();
         self.current_index = 0;
     }
 }

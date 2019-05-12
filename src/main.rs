@@ -25,8 +25,8 @@ mod world;
 
 use assets::spritesheet_map::SpritesheetMap;
 use components::{
-    tiled::TiledMap, AnimationSheet, Camera, Color, DeltaTime, EntityLookup, Node, ScreenChange,
-    Shape, Sprite, Text, Transform,
+    tiled::TiledMap, AnimationSheet, Camera, Color, DeltaTime, EntityLookup, Input, Node,
+    ScreenChange, Shape, Sprite, Text, Transform,
 };
 use screen::{play::Play, ScreenManager};
 use world::{render_from_node, setup_world};
@@ -105,6 +105,14 @@ fn main() -> Result<(), String> {
                     ..
                 } => {
                     running = false;
+                }
+                Event::KeyDown { keycode, .. } => {
+                    let mut input = world.write_resource::<Input>();
+                    input.set_pressed(&keycode.unwrap(), true);
+                }
+                Event::KeyUp { keycode, .. } => {
+                    let mut input = world.write_resource::<Input>();
+                    input.set_pressed(&keycode.unwrap(), false);
                 }
                 _ => {}
             }
