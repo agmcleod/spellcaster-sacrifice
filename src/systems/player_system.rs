@@ -2,7 +2,10 @@ use std::ops::Deref;
 
 use specs::{Join, Read, ReadStorage, System, WriteStorage};
 
-use crate::components::{AnimationSheet, DeltaTime, Input, Player, Sprite, Transform};
+use crate::{
+    components::{AnimationSheet, DeltaTime, Input, Player, Sprite, Transform},
+    SCREEN_HEIGHT, SCREEN_WIDTH,
+};
 
 const VELOCITY: f32 = 50.0;
 
@@ -80,6 +83,18 @@ impl<'a> System<'a> for PlayerSystem {
             }
 
             animation_sheet.playing = moving;
+            if moving {
+                let pos = transform.get_pos();
+                if pos.x < 0.0 {
+                    transform.set_pos(0.0, pos.y, pos.z);
+                } else if pos.x > SCREEN_WIDTH as f32 - transform.size.x as f32 {
+                    transform.set_pos(SCREEN_WIDTH as f32 - transform.size.x as f32, pos.y, pos.z);
+                } else if pos.y < 0.0 {
+                    transform.set_pos(pos.x, 0.0, pos.z);
+                } else if pos.y > SCREEN_HEIGHT as f32 - transform.size.y as f32 {
+                    transform.set_pos(pos.x, SCREEN_HEIGHT as f32 - transform.size.y as f32, pos.z);
+                }
+            }
         }
     }
 }
